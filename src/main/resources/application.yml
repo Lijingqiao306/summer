@@ -1,0 +1,151 @@
+spring:
+  application:
+    name: ykd_summer
+  ai:
+    openai:
+      base-url: https://dashscope.aliyuncs.com/compatible-mode/v1
+      api-key: ${OPENAI_API_KEY:}
+      chat:
+        model: qwen-plus
+      embedding:
+        model: text-embedding-v3
+    chat:
+      memory:
+        repository:
+          jdbc:
+            # 关闭 Spring AI 自动建表（VARCHAR(36) 不够用），改为 schema.sql 手动建表
+            initialize-schema: never
+  # H2 嵌入式数据库：持久化 Chat Memory
+  sql:
+    init:
+      mode: always
+  datasource:
+    url: jdbc:h2:file:./data/chat_memory;AUTO_SERVER=TRUE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+
+
+
+  mail:
+    host: smtp.qq.com
+    port: 587
+    username: ${QQ_MAIL_USERNAME:}           # 发件人 QQ 邮箱（如 123456789@qq.com）
+    password: ${QQ_MAIL_AUTH_CODE:}   # QQ 邮箱 SMTP 授权码
+    default-encoding: UTF-8
+    properties:
+      mail:
+        debug: false
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+          connectiontimeout: 10000
+          timeout: 10000
+          writetimeout: 10000
+
+# DashScope 原生服务配置
+dashscope:
+  workspace-id: ${DASHSCOPE_WORKSPACE_ID:}
+  image:
+    api-key: ${DASHSCOPE_API_KEY:${OPENAI_API_KEY:}}
+    generation:
+      model: z-image-turbo
+      size: 1024*1024
+    recognition:
+      model: qwen-vl-plus
+  voice:
+    api-key: ${DASHSCOPE_API_KEY:${OPENAI_API_KEY:}}
+    model: qwen3-asr-flash
+    tts-model: cosyvoice-v3-plus
+    tts-voice: longanyang
+    tts-format: mp3
+    tts-fallback-formats:
+      - mp3
+      - wav
+  # Token 用量追踪与费用计算
+  usage:
+    monthly-quota: 0                      # 月配额（token 数），0=不限配额
+    persist-path: data/token_usage.json    # 用量持久化文件路径
+    pricing:                               # 各 Agent 模型定价（元/千Token）
+      Router:
+        input-price: 0.001
+        output-price: 0.01
+      TEXT:
+        input-price: 0.0008
+        output-price: 0.002
+      IMAGE:
+        input-price: 0.0008
+        output-price: 0.002
+      FILE:
+        input-price: 0.0008
+        output-price: 0.002
+      BROWSER:
+        input-price: 0.0008
+        output-price: 0.002
+      BILIBILI:
+        input-price: 0.0003
+        output-price: 0.0006
+      SPRING:
+        input-price: 0.0003
+        output-price: 0.0006
+
+# 阿里云账户余额查询（BSS API）
+alibaba-cloud:
+  access-key-id: ${ALIBABA_CLOUD_ACCESS_KEY_ID:}
+  access-key-secret: ${ALIBABA_CLOUD_ACCESS_KEY_SECRET:}
+  bss:
+    endpoint: business.aliyuncs.com
+    api-version: "2017-12-14"
+
+app:
+  version: 0.0.1-SNAPSHOT
+
+# 个人信息向量库持久化配置
+personal:
+  vector-store:
+    # 向量库 JSON 文件路径（相对于 user.dir，启动时自动转为绝对路径）
+    file-path: ./data/personal_vector_store.json
+
+# 高德地图 Web 服务配置（位置感知 + POI 搜索 + 路径规划）
+amap:
+  api-key: ${AMAP_API_KEY:}
+
+# Spring 官网监测配置
+spring-monitor:
+  github-api-base: "https://api.github.com"                               # GitHub API 基础地址
+  mirror-url: ""                                                            # GitHub 镜像代理（留空 = 直连，需填代理时如 https://ghproxy.net）
+  blog-url: "https://spring.io/blog"                                      # Spring 官方博客地址
+  lookback-hours: 48                                                        # 只关注最近 N 小时内发布的 Release 和博客（用户直接查询类工具不受此限制）
+  simulated-date: ""                                                          # 模拟日期（yyyy-MM-dd），非空时以该日期为"今天"，空字符串则使用真实日期
+  cron: "0 55 9 * * *"                                                      # 定时任务 cron 表达式（当前：每天 9:55）
+  monitor-repos: >
+    spring-projects/spring-boot,
+    spring-projects/spring-framework,
+    spring-projects/spring-cloud,
+    spring-projects/spring-security,
+    spring-projects/spring-ai,
+    spring-projects/spring-data-commons,
+    spring-projects/spring-batch
+
+# B站数据日报配置
+bilibili:
+  report-qq: ${BILIBILI_REPORT_QQ:}       # 接收日报的 QQ 号（纯数字，自行填写）
+  cookie: ${BILIBILI_COOKIE:}             # B站 Cookie 字符串（SESSDATA=xxx; bili_jct=xxx; ...），也可在 data/bilibili_cookie.json 中存储
+  uid: ${BILIBILI_UID:}                    # B站用户 mid（在个人空间 URL 中可获取）
+  video:
+    default-cover: ${BILIBILI_DEFAULT_COVER:}   # 发布视频时使用的默认封面图片路径（支持 jpg/png，留空则不使用默认封面）
+    publish-headless: false                                                  # Playwright 发布是否无头（false=弹出浏览器，便于过验证）
+  comment-monitor:
+    enabled: true           # 是否启用评论监控
+    min-likes: 3            # 点赞阈值（≥ 此值则推送提醒）
+    moderation-alert-threshold: 5  # 批量删除阈值（单次 ≥ 此值发送人工干预邮件）
+
+logging:
+  level:
+    org.example.ykd_summer: DEBUG  # 项目自身日志
